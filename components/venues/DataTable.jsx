@@ -1,3 +1,5 @@
+// components/venues/DataTable.jsx
+
 "use client";
 
 import { useState } from "react";
@@ -32,7 +34,10 @@ export function DataTable({
   onSearch = () => {},
   searchValue = "",
 }) {
-  const [sorting, setSorting] = useState([]);
+  // Set initial sorting to created_at in descending order
+  const [sorting, setSorting] = useState([
+    { id: "created_at", desc: true }
+  ]);
   const [columnVisibility, setColumnVisibility] = useState({});
   const [searchQuery, setSearchQuery] = useState(searchValue || "");
   
@@ -51,11 +56,12 @@ export function DataTable({
       columnVisibility,
       pagination,
     },
-    manualPagination: true,
     onSortingChange: setSorting,
     onColumnVisibilityChange: setColumnVisibility,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
+    getSortedRowModel: getSortedRowModel(), // Add this to enable sorting
+    manualPagination: true,
   });
 
   return (
@@ -165,9 +171,8 @@ export function DataTable({
           </TableBody>
         </Table>
       </div>
-      
       <div className="flex items-center justify-between space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
+      <div className="flex-1 text-sm text-muted-foreground">
           {data && data.length > 0 ? (
             <>
               Showing {pagination.pageSize * pagination.pageIndex + 1}-
@@ -180,28 +185,27 @@ export function DataTable({
           ) : (
             "No venues to display"
           )}
-          {searchQuery && <span className="ml-2">• Filtered by: {searchQuery}</span>}
         </div>
         <div className="flex items-center space-x-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setPagination(prev => ({ ...prev, pageIndex: 0 }))}
-            disabled={pagination.pageIndex === 0 || loading}
+            onClick={() => table.setPageIndex(0)}
+            disabled={!table.getCanPreviousPage()}
           >
             <ChevronsLeft className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setPagination(prev => ({ ...prev, pageIndex: prev.pageIndex - 1 }))}
-            disabled={pagination.pageIndex === 0 || loading}
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-1">
             <span className="text-sm font-medium">
-              {pagination.pageIndex + 1}
+              {table.getState().pagination.pageIndex + 1}
             </span>
             <span className="text-sm text-muted-foreground">of</span>
             <span className="text-sm font-medium">{pageCount || 1}</span>
@@ -209,16 +213,16 @@ export function DataTable({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setPagination(prev => ({ ...prev, pageIndex: prev.pageIndex + 1 }))}
-            disabled={pagination.pageIndex + 1 >= pageCount || loading}
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setPagination(prev => ({ ...prev, pageIndex: pageCount - 1 }))}
-            disabled={pagination.pageIndex + 1 >= pageCount || loading}
+            onClick={() => table.setPageIndex(pageCount - 1)}
+            disabled={!table.getCanNextPage()}
           >
             <ChevronsRight className="h-4 w-4" />
           </Button>

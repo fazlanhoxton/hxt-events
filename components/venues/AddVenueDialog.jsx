@@ -1,3 +1,4 @@
+// components/venues/AddVenueDialog.jsx
 "use client";
 
 import { useState } from "react";
@@ -23,8 +24,6 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
     Select,
     SelectContent,
@@ -32,8 +31,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { createVenue } from "@/lib/api/venues";
+import { toast } from "sonner";
 
 // Validation schema for our form
 const venueFormSchema = z.object({
@@ -48,85 +50,84 @@ const venueFormSchema = z.object({
 
 // List of time zones from your API data and common ones
 const timeZones = [
-    // Time zones from your API data
-    "Abu Dhabi", 
-    "Brisbane",
-    "Cairo",
-    "London",
-    "Melbourne",
-    "Perth",
-    "Riyadh",
-    "Sydney",
-    
-    // Common US/Canada time zones
-    "Pacific Time (US & Canada)",
-    "Mountain Time (US & Canada)",
-    "Central Time (US & Canada)",
-    "Eastern Time (US & Canada)",
-    "Alaska",
-    "Hawaii",
-    "Arizona",
-    
-    // Major international cities
-    "Amsterdam",
-    "Athens",
-    "Bangkok",
-    "Beijing",
-    "Berlin",
-    "Bern",
-    "Brussels",
-    "Bucharest",
-    "Budapest",
-    "Copenhagen",
-    "Dublin",
-    "Edinburgh",
-    "Frankfurt",
-    "Geneva",
-    "Helsinki",
-    "Hong Kong",
-    "Istanbul",
-    "Jakarta",
-    "Jerusalem",
-    "Johannesburg",
-    "Kuala Lumpur",
-    "Kuwait",
-    "Lagos",
-    "Lisbon",
-    "Madrid",
-    "Manila",
-    "Mexico City",
-    "Milan",
-    "Moscow",
-    "Mumbai",
-    "Munich",
-    "Nairobi",
-    "New Delhi",
-    "Oslo",
-    "Paris",
-    "Prague",
-    "Rome",
-    "Santiago",
-    "Seoul",
-    "Shanghai",
-    "Singapore",
-    "Stockholm",
-    "Taipei",
-    "Tokyo",
-    "Toronto",
-    "Vancouver",
-    "Vienna",
-    "Warsaw",
-    "Zurich",
-    
-    // UTC and GMT options
-    "UTC",
-    "GMT"
-  ];
+  // Time zones from your API data
+  "Abu Dhabi", 
+  "Brisbane",
+  "Cairo",
+  "London",
+  "Melbourne",
+  "Perth",
+  "Riyadh",
+  "Sydney",
+  
+  // Common US/Canada time zones
+  "Pacific Time (US & Canada)",
+  "Mountain Time (US & Canada)",
+  "Central Time (US & Canada)",
+  "Eastern Time (US & Canada)",
+  "Alaska",
+  "Hawaii",
+  "Arizona",
+  
+  // Major international cities
+  "Amsterdam",
+  "Athens",
+  "Bangkok",
+  "Beijing",
+  "Berlin",
+  "Bern",
+  "Brussels",
+  "Bucharest",
+  "Budapest",
+  "Copenhagen",
+  "Dublin",
+  "Edinburgh",
+  "Frankfurt",
+  "Geneva",
+  "Helsinki",
+  "Hong Kong",
+  "Istanbul",
+  "Jakarta",
+  "Jerusalem",
+  "Johannesburg",
+  "Kuala Lumpur",
+  "Kuwait",
+  "Lagos",
+  "Lisbon",
+  "Madrid",
+  "Manila",
+  "Mexico City",
+  "Milan",
+  "Moscow",
+  "Mumbai",
+  "Munich",
+  "Nairobi",
+  "New Delhi",
+  "Oslo",
+  "Paris",
+  "Prague",
+  "Rome",
+  "Santiago",
+  "Seoul",
+  "Shanghai",
+  "Singapore",
+  "Stockholm",
+  "Taipei",
+  "Tokyo",
+  "Toronto",
+  "Vancouver",
+  "Vienna",
+  "Warsaw",
+  "Zurich",
+  
+  // UTC and GMT options
+  "UTC",
+  "GMT"
+];
 
 export function AddVenueDialog({ onVenueCreated }) {
     const [open, setOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [formError, setFormError] = useState("");
 
     const form = useForm({
         resolver: zodResolver(venueFormSchema),
@@ -143,13 +144,9 @@ export function AddVenueDialog({ onVenueCreated }) {
 
     async function onSubmit(data) {
         setIsSubmitting(true);
-        setFormError("");
-
         try {
-            console.log("Creating venue with data:", data);
             const response = await createVenue(data);
-            console.log("Venue created successfully:", response);
-
+            toast.success("Venue created successfully!");
             form.reset();
             setOpen(false);
 
@@ -158,8 +155,7 @@ export function AddVenueDialog({ onVenueCreated }) {
                 onVenueCreated(response.data);
             }
         } catch (error) {
-            console.error("Failed to create venue:", error);
-            setFormError(error.message || "Failed to create venue. Please try again.");
+            toast.error(`Failed to create venue: ${error.message}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -195,7 +191,6 @@ export function AddVenueDialog({ onVenueCreated }) {
                                 </FormItem>
                             )}
                         />
-
                         <FormField
                             control={form.control}
                             name="description"
@@ -213,16 +208,15 @@ export function AddVenueDialog({ onVenueCreated }) {
                                 </FormItem>
                             )}
                         />
-
                         <FormField
                             control={form.control}
                             name="time_zone"
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Time Zone</FormLabel>
-                                    <Select
-                                        onValueChange={field.onChange}
-                                        defaultValue={field.value}
+                                    <Select 
+                                      onValueChange={field.onChange} 
+                                      defaultValue={field.value}
                                     >
                                         <FormControl>
                                             <SelectTrigger>
@@ -244,7 +238,6 @@ export function AddVenueDialog({ onVenueCreated }) {
                                 </FormItem>
                             )}
                         />
-
                         <div className="grid grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
@@ -266,11 +259,11 @@ export function AddVenueDialog({ onVenueCreated }) {
                                     <FormItem>
                                         <FormLabel>Country Code</FormLabel>
                                         <FormControl>
-                                            <Input
-                                                placeholder="CA"
-                                                {...field}
-                                                maxLength={2}
-                                                className="uppercase"
+                                            <Input 
+                                              placeholder="CA" 
+                                              {...field} 
+                                              maxLength={2}
+                                              className="uppercase"
                                             />
                                         </FormControl>
                                         <FormDescription>
@@ -281,20 +274,8 @@ export function AddVenueDialog({ onVenueCreated }) {
                                 )}
                             />
                         </div>
-
-                        {formError && (
-                            <div className="text-sm font-medium text-destructive">
-                                {formError}
-                            </div>
-                        )}
-
                         <DialogFooter>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setOpen(false)}
-                                disabled={isSubmitting}
-                            >
+                            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={isSubmitting}>

@@ -15,7 +15,7 @@ export default function VenuesPage() {
     // Pagination state
     const [pagination, setPagination] = useState({
         pageIndex: 0, // 0-based index for TanStack Table
-        pageSize: 10,
+        pageSize: 20,
     });
 
     const [pageCount, setPageCount] = useState(0);
