@@ -47,8 +47,7 @@ import { toast } from "sonner";
 // Validation schema for event form
 const eventFormSchema = z.object({
     name: z.string().min(2, "Event name must be at least 2 characters."),
-    description: z.string().optional(),
-    date: z.string().min(1, "Event date is required."),
+    date: z.string().min(2, "Event date is required."),
     venue: z.string().min(1, "Venue is required."),
     status: z.enum(["upcoming", "active", "completed", "cancelled", "draft"]),
 });
@@ -102,6 +101,8 @@ export function AddEventDialog({ onEventCreated }) {
     });
 
     async function onSubmit(data) {
+        console.log(data);
+        
         setIsSubmitting(true);
         try {
             // Get the venue name based on the selected venue ID
@@ -155,7 +156,7 @@ export function AddEventDialog({ onEventCreated }) {
                                 <FormItem>
                                     <FormLabel>Event Name</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Annual Conference 2025" {...field} />
+                                        <Input autoComplete="off" placeholder="Annual Conference 2025" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
