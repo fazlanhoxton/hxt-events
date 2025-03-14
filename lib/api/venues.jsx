@@ -6,7 +6,7 @@ export async function GET() {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Token ${process.env.GUEST_MANAGER_AUTH_TOKEN}`,
+        'Authorization': `Token ${process.env.NEXT_PUBLIC_GUEST_MANAGER_AUTH_TOKEN}`,
       },
     });
 
@@ -106,48 +106,21 @@ export async function getVenues(params = {}) {
   }
 }
 
-// // In /lib/api/venues.js
-// export async function fetchVenues() {
-//   // Replace with your actual API endpoint
-//   const response = await fetch('/api/guest-manager/venues');
 
-//   if (!response.ok) {
-//     throw new Error('Failed to fetch venues');
-//   }
-
-//   const data = await response.json();
-//   return data.venues; // Adjust based on your API response structure
-// }
-
-// lib/api/venues.js
+/**
+ * Fetches venues from our internal API route
+ * @returns {Promise<Object>} The venues data
+ */
 export async function fetchGuestManagerVenues() {
   try {
-    // For development, use mock data instead of calling an API that doesn't exist yet
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Mock venues from Guest Manager
-    return [
-      { id: "gm-venue-1", name: "Grand Ballroom", capacity: 500, location: "Main Building" },
-      { id: "gm-venue-2", name: "Conference Center", capacity: 300, location: "East Wing" },
-      { id: "gm-venue-3", name: "Exhibition Hall", capacity: 1000, location: "South Wing" },
-      { id: "gm-venue-4", name: "Rooftop Garden", capacity: 150, location: "Penthouse" },
-      { id: "gm-venue-5", name: "Beachfront Pavilion", capacity: 200, location: "Oceanside" }
-    ];
-    
-    /* 
-    // When the actual API is ready, replace the mock with this:
-    const response = await fetch('/api/guest-manager/venues');
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch venues: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data.venues || [];
-    */
+      console.log('Client: Fetching venues from internal API route');
+      const response = await fetch('/api/venues');
+      if (!response.ok) {
+          throw new Error(`Failed to fetch venues: ${response.statusText}`);
+      }
+      return await response.json();
   } catch (error) {
-    console.error('Error fetching Guest Manager venues:', error);
-    throw error;
+      console.error('Error fetching venues:', error);
+      throw error;
   }
 }

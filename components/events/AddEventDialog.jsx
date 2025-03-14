@@ -1,13 +1,19 @@
-// components/events/AddEventDialog.jsx
+// components/venues/AddVenueDialog.jsx
 "use client";
 
-import { createEvent } from "@/lib/api/events";
-import { fetchGuestManagerVenues } from "@/lib/api/venues";
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
+import { fetchGuestManagerVenues } from '@/lib/api/venues';
+import { Separator } from "@/components/ui/separator"
+
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
 import {
     Dialog,
     DialogContent,
@@ -24,8 +30,9 @@ import {
     FormField,
     FormItem,
     FormLabel,
-    FormMessage,
+    FormMessage
 } from "@/components/ui/form";
+// Make sure these imports are included
 import {
     Select,
     SelectContent,
@@ -34,7 +41,6 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -55,37 +61,34 @@ export function AddEventDialog({ onEventCreated }) {
 
     // Fetch venues from Guest Manager when the dialog opens
     useEffect(() => {
-        if (open) {
-            const loadVenues = async () => {
-                setIsLoadingVenues(true);
-                try {
-                    const venueData = await fetchGuestManagerVenues();
+        if (!open) return;
+
+        async function loadVenues() {
+            try {
+                console.log("Fetching venues...");
+                const venueData = await fetchGuestManagerVenues();
+                console.log("Received venue data:", venueData); // Debugging
+
+                // ✅ Ensure 'venueData' is an array before setting state
+                if (Array.isArray(venueData)) {
                     setVenues(venueData);
-                    
-                    // If venues are loaded and there's at least one venue,
-                    // set the default venue to the first one
-                    if (venueData.length > 0) {
-                        form.setValue('venue', venueData[0].id);
-                    }
-                } catch (error) {
-                    console.error("Error loading venues:", error);
-                    toast.error("Failed to load venues. Using default options.");
-                    
-                    // Fallback to basic venues if the API fails
-                    const fallbackVenues = [
-                        { id: "venue-default-1", name: "Default Venue 1" },
-                        { id: "venue-default-2", name: "Default Venue 2" }
-                    ];
-                    setVenues(fallbackVenues);
-                    form.setValue('venue', fallbackVenues[0].id);
-                } finally {
-                    setIsLoadingVenues(false);
+                } else if (venueData && venueData.data && Array.isArray(venueData.data)) {
+                    setVenues(venueData.data); // Fix: If 'venueData' has 'data' property, use that
+                } else {
+                    console.error("Unexpected venue data format:", venueData);
+                    toast.error("Unexpected response format. Please try again.");
                 }
-            };
-            
-            loadVenues();
+            } catch (error) {
+                console.error("Error loading venues:", error);
+                toast.error("Failed to load venues. Using default options.");
+            } finally {
+                setIsLoadingVenues(false);
+            }
         }
+
+        loadVenues();
     }, [open]);
+
 
     const form = useForm({
         resolver: zodResolver(eventFormSchema),
@@ -103,7 +106,7 @@ export function AddEventDialog({ onEventCreated }) {
         try {
             // Get the venue name based on the selected venue ID
             const selectedVenue = venues.find(venue => venue.id === data.venue);
-            
+
             // Create mock response with a generated ID, guestManagerId, and venue details
             const mockedResponse = {
                 id: Date.now(),
@@ -112,7 +115,8 @@ export function AddEventDialog({ onEventCreated }) {
                 ...data,
                 venueDetails: selectedVenue // Include full venue details
             };
-            
+            console.log(mockedResponse);
+
             toast.success("Event created successfully!");
             form.reset();
             setOpen(false);
@@ -127,7 +131,6 @@ export function AddEventDialog({ onEventCreated }) {
             setIsSubmitting(false);
         }
     }
-
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -158,95 +161,72 @@ export function AddEventDialog({ onEventCreated }) {
                                 </FormItem>
                             )}
                         />
-                        <FormField
-                            control={form.control}
-                            name="description"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Description</FormLabel>
-                                    <FormControl>
-                                        <Textarea
-                                            placeholder="Brief description of the event"
-                                            {...field}
-                                            value={field.value || ''}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="date"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Event Date</FormLabel>
-                                    <FormControl>
-                                        <Input type="date" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="venue"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Venue</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger className={isLoadingVenues ? "opacity-70" : ""}>
-                                                <SelectValue placeholder={isLoadingVenues ? "Loading venues..." : "Select a venue"} />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {venues.map((venue) => (
-                                                <SelectItem key={venue.id} value={venue.id}>
-                                                    {venue.name}
+
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="eventDate"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-col">
+                                        <FormLabel>Event Date</FormLabel>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="outline" className="w-full pl-3 text-left">
+                                                    {field.value ? format(field.value, "PPP") : "Select a date"}
+                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={field.value ? new Date(field.value) : undefined}
+                                                    onSelect={(date) => {
+                                                        field.onChange(date);
+                                                    }}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="venue"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Venue</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value || "default-venue"} className="truncate whitespace-nowrap overflow-hidden text-ellipsis">
+                                            <FormControl>
+                                                <SelectTrigger className="w-[230px]">
+                                                    <SelectValue placeholder="Select a venue" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem key="default-venue" value="default-venue" disabled>
+                                                    Select a venue
                                                 </SelectItem>
-                                            ))}
-                                            {venues.length === 0 && (
-                                                <SelectItem value="default-venue">
-                                                    No venues available
-                                                </SelectItem>
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormDescription>
-                                        Select from available Guest Manager venues
-                                    </FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="status"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Status</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select event status" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="upcoming">Upcoming</SelectItem>
-                                            <SelectItem value="active">Active</SelectItem>
-                                            <SelectItem value="completed">Completed</SelectItem>
-                                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                                            <SelectItem value="draft">Draft</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <FormDescription>
-                                        Current status of the event
-                                    </FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                                                {venues.length > 0 ? (
+                                                    venues.map((venue) => (
+                                                        <SelectItem key={venue.id} value={String(venue.id)}>
+                                                            {venue.name}
+                                                        </SelectItem>
+                                                    ))
+                                                ) : (
+                                                    <SelectItem key="no-venues" value="no-venues" disabled>
+                                                        No venues available
+                                                    </SelectItem>
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        <Separator className="my-4" />
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                                 Cancel
