@@ -1,13 +1,8 @@
 export async function POST(req) {
-    console.log("Received request body:", req);
-    alert();
     try {
         const body = await req.json();
-        
-        // Debugging logs
-        console.log("Received request body:", body);
 
-        if (!body.starts_at || !body.end_at) {
+        if (!body.starts_at || !body.ends_at) {
             throw new Error("Missing start or end date.");
         }
 
@@ -16,7 +11,8 @@ export async function POST(req) {
             throw new Error("Missing API Token! Check .env.local");
         }
 
-        const response = await fetch("https://app.guestmanager.com/api/public/v2/events/", {
+        // 🔹 Step 1: Create Event in Guest Manager
+        const gmResponse = await fetch("https://app.guestmanager.com/api/public/v2/events/", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -25,13 +21,61 @@ export async function POST(req) {
             body: JSON.stringify(body),
         });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Guest Manager API error: ${response.status} - ${errorText}`);
+        if (!gmResponse.ok) {
+            const errorText = await gmResponse.text();
+            throw new Error(`Guest Manager API error: ${gmResponse.status} - ${errorText}`);
         }
 
-        const data = await response.json();
-        return new Response(JSON.stringify(data), { status: 200 });
+        const eventData = await gmResponse.json();
+        console.log("✅ Event Created in Guest Manager:", eventData);
+
+        // 🔹 Step 2: Create Item in DatoCMS using JSON:API format
+        const DATO_API_TOKEN = process.env.NEXT_PUBLIC_DATOCMS_API_TOKEN;
+        if (!DATO_API_TOKEN) {
+            throw new Error("Missing DatoCMS API Token! Check .env.local");
+        }
+
+        // Prepare the JSON:API formatted request for DatoCMS
+        const datoRequestBody = {
+            data: {
+                type: "item",
+                attributes: {
+                    event_name: eventData.name,
+                    default_sc_id: "1231", // Replace with dynamic value if needed
+                    event_id_guest_manager: eventData.id.toString() // Convert ID to string as in your example
+                },
+                relationships: {
+                    item_type: {
+                        data: {
+                            id: "egMSN5CuQquIDNV6P_lAKQ", // Your model ID
+                            type: "item_type"
+                        }
+                    }
+                }
+            }
+        };
+
+        const datoResponse = await fetch("https://site-api.datocms.com/items", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/vnd.api+json",
+                "Authorization": `Bearer ${DATO_API_TOKEN}`,
+                "Accept": "application/vnd.api+json",
+                "X-Api-Version": "3"
+            },
+            body: JSON.stringify(datoRequestBody)
+        });
+
+        if (!datoResponse.ok) {
+            const datoError = await datoResponse.text();
+            throw new Error(`DatoCMS API error: ${datoResponse.status} - ${datoError}`);
+        }
+
+        const datoData = await datoResponse.json();
+        console.log("✅ Event Created in DatoCMS:", datoData);
+
+        return new Response(JSON.stringify({ eventData, datoData }), { status: 200 });
+
     } catch (error) {
         console.error("API Request Failed:", error.message);
         return new Response(JSON.stringify({ error: error.message }), { status: 500 });
