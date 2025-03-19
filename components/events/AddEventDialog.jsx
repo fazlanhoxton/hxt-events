@@ -45,7 +45,7 @@ const eventFormSchema = z.object({
     startDate: z.date({ required_error: "Event start date is required." }),
     endDate: z.date({ required_error: "Event end date is required." }),
     venue: z.string().min(1, "Venue is required."),
-    status: z.enum(["upcoming", "active", "completed", "cancelled", "draft"]),
+    sc_id: z.string().min(1, "SC ID is required."),
 });
 
 export function AddEventDialog({ onEventCreated }) {
@@ -85,7 +85,7 @@ export function AddEventDialog({ onEventCreated }) {
             startDate: new Date(),
             endDate: new Date(),
             venue: "",
-            status: "upcoming",
+            sc_id: "",
         },
     });
 
@@ -104,11 +104,17 @@ export function AddEventDialog({ onEventCreated }) {
             return;
         }
 
-        // Ensure start date is in the future
+        // Date Validation
         const now = new Date();
         if (selectedStartedDate <= now) {
             console.error("Error: Start date must be in the future");
             toast.error("Start date must be in the future.");
+            setIsSubmitting(false);
+            return;
+        }
+        if (selectedEndDate <= selectedStartedDate) {
+            console.error("Error: End date must be later than the start date.");
+            toast.error("End date must be later than the start date.");
             setIsSubmitting(false);
             return;
         }
@@ -132,6 +138,7 @@ export function AddEventDialog({ onEventCreated }) {
             starts_at: formattedStartDate,
             ends_at: formattedEndDate,
             venue_id: venueId,
+            sc_id: data.sc_id,
         };
 
         try {
@@ -155,8 +162,10 @@ export function AddEventDialog({ onEventCreated }) {
                 );
             }
 
-            toast.error("Event created successfully!");
+            toast.success("Event created successfully!");
             setOpen(false);
+            //reset the form
+            form.reset();
             onEventCreated(); // Refresh event list if applicable
         } catch (error) {
             console.error("Submission Error:", error.message);
@@ -193,6 +202,23 @@ export function AddEventDialog({ onEventCreated }) {
                                         <Input
                                             autoComplete="off"
                                             placeholder="Annual Conference 2025"
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="sc_id"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Default SC_ID</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            autoComplete="off"
+                                            placeholder="1000"
                                             {...field}
                                         />
                                     </FormControl>

@@ -1,4 +1,6 @@
 export async function POST(req) {
+    console.log(req.body);
+    
     try {
         const body = await req.json();
 
@@ -41,8 +43,10 @@ export async function POST(req) {
                 type: "item",
                 attributes: {
                     event_name: eventData.name,
-                    default_sc_id: "1231", // Replace with dynamic value if needed
-                    event_id_guest_manager: eventData.id.toString() // Convert ID to string as in your example
+                    default_sc_id: body.sc_id, 
+                    event_id_guest_manager: eventData.id.toString(),
+                    start_date_and_time: body.starts_at,
+                    end_date_and_time: body.ends_at
                 },
                 relationships: {
                     item_type: {
