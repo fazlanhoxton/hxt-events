@@ -1,6 +1,6 @@
 // lib/api/events.js
 
-import { fetchFromDatoCMS } from '../datocms';
+import { fetchFromDatoCMS } from "../datocms";
 
 /**
  * Fetches all events from DatoCMS
@@ -17,38 +17,67 @@ export async function fetchEventsFromDatoCMS() {
           defaultScId
           eventIdGuestManager
           eventName
+          endDateAndTime
+          startDateAndTime
         }
       }
     `;
 
     // Check if API token is available
     if (!process.env.NEXT_PUBLIC_DATOCMS_API_TOKEN) {
-      throw new Error('DatoCMS API token not found. Please set NEXT_PUBLIC_DATOCMS_API_TOKEN in your environment variables.');
+      throw new Error(
+        "DatoCMS API token not found. Please set NEXT_PUBLIC_DATOCMS_API_TOKEN in your environment variables."
+      );
     }
 
     const data = await fetchFromDatoCMS({ query });
-    
+
     if (!data || !data.allEvents) {
-      throw new Error('Invalid data structure received from DatoCMS');
+      throw new Error("Invalid data structure received from DatoCMS");
     }
-    
+
     // Transform the data to match what your UI expects
-    const transformedEvents = data.allEvents.map(event => ({
-      id: event.id,
-      name: event.eventName || 'Unnamed Event', 
-      guestManagerId: event.eventIdGuestManager || '-',
-      defaultScId: event.defaultScId || '-',
-      // Provide default values for fields needed by UI but not in DatoCMS
-      date: new Date().toISOString(),
-      status: 'upcoming',
-      venue: '-',
-      attendeeCount: 0,
-      description: '-'
-    }));
-    
+    const transformedEvents = data.allEvents.map((event) => {
+      // Helper function to format date (defined inside map to access it easily)
+      const formatDate = (dateString) => {
+        if (!dateString) return null;
+        const date = new Date(dateString);
+
+        // Format year, month, day
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+        const day = String(date.getUTCDate()).padStart(2, "0");
+
+        // Format hours, minutes, seconds
+        const hours = String(date.getUTCHours()).padStart(2, "0");
+        const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+        const seconds = String(date.getUTCSeconds()).padStart(2, "0");
+
+        // Return formatted date
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+00:00`;
+      };
+
+      // Format the date for display
+      const formattedDate = formatDate(event.endDateAndTime);
+
+      // Use the original date object for comparison
+      const endDate = new Date(event.endDateAndTime);
+
+      return {
+        id: event.id,
+        name: event.eventName || "Unnamed Event",
+        guestManagerId: event.eventIdGuestManager || "-",
+        defaultScId: event.defaultScId || "-",
+        date: formattedDate, // Use the formatted date
+        status: endDate <= new Date() ? "Completed" : "Upcoming" || "-",
+        venue: "-",
+        attendeeCount: 0,
+      };
+    });
+
     return transformedEvents;
   } catch (error) {
-    console.error('Error fetching events from DatoCMS:', error);
+    console.error("Error fetching events from DatoCMS:", error);
     throw new Error(`Failed to fetch events: ${error.message}`);
   }
 }
@@ -61,9 +90,11 @@ export async function fetchEventsFromDatoCMS() {
  */
 export async function createEvent(eventData) {
   if (!process.env.NEXT_PUBLIC_DATOCMS_API_TOKEN) {
-    throw new Error('DatoCMS API token not found. Please set NEXT_PUBLIC_DATOCMS_API_TOKEN in your environment variables.');
+    throw new Error(
+      "DatoCMS API token not found. Please set NEXT_PUBLIC_DATOCMS_API_TOKEN in your environment variables."
+    );
   }
-  
+
   // Create mutation with only the fields that exist in your schema
   const mutation = `
     mutation CreateEvent(
@@ -90,16 +121,19 @@ export async function createEvent(eventData) {
     // Map form data to what your API expects
     const variables = {
       eventName: eventData.name || eventData.eventName,
-      eventIdGuestManager: eventData.guestManagerId || eventData.eventIdGuestManager || `GM-${Date.now()}`,
+      eventIdGuestManager:
+        eventData.guestManagerId ||
+        eventData.eventIdGuestManager ||
+        `GM-${Date.now()}`,
       defaultScId: eventData.defaultScId || null,
     };
 
     const data = await fetchFromDatoCMS({ query: mutation, variables });
-    
+
     if (!data || !data.createEvent) {
-      throw new Error('Failed to create event in DatoCMS');
+      throw new Error("Failed to create event in DatoCMS");
     }
-    
+
     // Transform response to match UI expectations
     return {
       id: data.createEvent.id,
@@ -108,66 +142,13 @@ export async function createEvent(eventData) {
       defaultScId: data.createEvent.defaultScId,
       // Provide default values for fields needed by UI
       date: new Date().toISOString(),
-      status: 'upcoming',
-      venue: '-',
+      status: "upcoming",
+      venue: "-",
       attendeeCount: 0,
-      description: '-'
+      description: "-",
     };
   } catch (error) {
-    console.error('Error creating event in DatoCMS:', error);
+    console.error("Error creating event in DatoCMS:", error);
     throw new Error(`Failed to create event: ${error.message}`);
-  }
-}
-
-/**
- * Fetches a single event by ID from DatoCMS
- * @param {string|number} id - The ID of the event to fetch
- * @returns {Promise<Object>} The event
- * @throws {Error} If fetching fails
- */
-export async function getEventById(id) {
-  if (!process.env.NEXT_PUBLIC_DATOCMS_API_TOKEN) {
-    throw new Error('DatoCMS API token not found. Please set NEXT_PUBLIC_DATOCMS_API_TOKEN in your environment variables.');
-  }
-  
-  const query = `
-    query GetEvent($id: ItemId!) {
-      event(filter: {id: {eq: $id}}) {
-        id
-        defaultScId
-        eventIdGuestManager
-        eventName
-      }
-    }
-  `;
-
-  try {
-    const variables = { id };
-    const data = await fetchFromDatoCMS({ query, variables });
-    
-    if (!data) {
-      throw new Error('Invalid data structure received from DatoCMS');
-    }
-    
-    if (!data.event) {
-      return null;
-    }
-    
-    // Transform response to match UI expectations
-    return {
-      id: data.event.id,
-      name: data.event.eventName,
-      guestManagerId: data.event.eventIdGuestManager,
-      defaultScId: data.event.defaultScId,
-      // Provide default values for fields needed by UI
-      date: new Date().toISOString(),
-      status: 'upcoming',
-      venue: '-',
-      attendeeCount: 0,
-      description: '-'
-    };
-  } catch (error) {
-    console.error('Error fetching event from DatoCMS:', error);
-    throw new Error(`Failed to fetch event: ${error.message}`);
   }
 }

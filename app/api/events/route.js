@@ -46,7 +46,8 @@ export async function POST(req) {
                     default_sc_id: body.sc_id, 
                     event_id_guest_manager: eventData.id.toString(),
                     start_date_and_time: body.starts_at,
-                    end_date_and_time: body.ends_at
+                    end_date_and_time: body.ends_at,
+                    created_at: eventData.created_at
                 },
                 relationships: {
                     item_type: {
