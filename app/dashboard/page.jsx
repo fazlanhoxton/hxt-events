@@ -119,6 +119,16 @@ export default function DashboardPage() {
     fetchEvents();
   };
 
+  useEffect(() => {
+    const formattedEvents = events.map(event => ({
+      ...event,
+      county: event.county || "N/A",
+    }));
+  
+    setFilteredEvents(formattedEvents);
+  }, [events]); // Runs when `events` updates
+  
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>

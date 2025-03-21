@@ -96,6 +96,20 @@ export const columns = [
     sortingFn: "datetime",
   },
   {
+    accessorKey: "county",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        County
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => <div>{row.getValue("county") || "-"}</div>,
+  },
+  
+  {
     accessorKey: "venue",
     header: ({ column }) => {
       return (
