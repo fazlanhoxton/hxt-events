@@ -20,8 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from "lucide-react";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"; 
 export function EventsDataTable({
     columns,
     data,
@@ -34,7 +33,7 @@ export function EventsDataTable({
 }) {
     // Set initial sorting to created_at in descending order
     const [sorting, setSorting] = useState([
-        { id: "date", desc: true }
+        { id: "starts_at", desc: true }
     ]);
     const [columnVisibility, setColumnVisibility] = useState({});
     const [searchQuery, setSearchQuery] = useState(searchValue || "");

@@ -16,17 +16,19 @@ import {
 function formatColumnDate(dateString) {
   if (!dateString) return "-";
   const date = new Date(dateString);
-  return isNaN(date) ? "-" : date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  return isNaN(date)
+    ? "-"
+    : date.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
 }
 
 // Function to render status badge with appropriate color
 const renderStatusBadge = (status) => {
   if (!status) return <Badge variant="outline">Unknown</Badge>;
-  
+
   let variant = "outline";
   switch (status.toLowerCase()) {
     case "upcoming":
@@ -69,32 +71,45 @@ export const columns = [
         </Button>
       );
     },
-    cell: ({ row }) => <div className="font-medium">{row.getValue("name") || "Unnamed Event"}</div>,
+    cell: ({ row }) => (
+      <div className="font-medium">
+        {row.getValue("name") || "Unnamed Event"}
+      </div>
+    ),
   },
+
   {
-    accessorKey: "date",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Event Date
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    accessorKey: "starts_at",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Event Date
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => {
-      const date = row.getValue("date");
+      const date = row.getValue("starts_at");
       return (
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
-          {formatColumnDate(date)}
+          {date
+            ? new Date(date).toLocaleDateString("en-GB", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+              })
+            : "-"}
         </div>
       );
     },
     sortingFn: "datetime",
   },
+
   {
     accessorKey: "county",
     header: ({ column }) => (
@@ -108,7 +123,7 @@ export const columns = [
     ),
     cell: ({ row }) => <div>{row.getValue("county") || "-"}</div>,
   },
-  
+
   {
     accessorKey: "venue",
     header: ({ column }) => {
@@ -180,14 +195,18 @@ export const columns = [
     },
     cell: ({ row }) => {
       const count = row.getValue("attendeeCount");
-      return <div className="text-center font-medium">{count !== undefined ? count : "-"}</div>;
+      return (
+        <div className="text-center font-medium">
+          {count !== undefined ? count : "-"}
+        </div>
+      );
     },
   },
   {
     id: "actions",
     cell: ({ row }) => {
       const event = row.original;
-      
+
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -198,14 +217,18 @@ export const columns = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(event.id.toString())}>
+            <DropdownMenuItem
+              onClick={() => navigator.clipboard.writeText(event.id.toString())}
+            >
               Copy ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>View details</DropdownMenuItem>
             <DropdownMenuItem>Edit event</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">Delete event</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive">
+              Delete event
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );

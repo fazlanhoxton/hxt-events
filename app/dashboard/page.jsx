@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { AddEventDialog } from "@/components/events/AddEventDialog";
 import { Toaster } from "sonner";
-import { fetchEventsFromDatoCMS } from "@/lib/api/events";
+import { fetchEventsFromGuestManager } from "@/lib/api/events";
 import { EventsDataTable } from "@/components/events/EventsDataTable";
 import { columns } from "@/components/events/Columns";
 import { CardSkeleton } from "@/components/ui/card-skeleton";
@@ -41,7 +41,10 @@ export default function DashboardPage() {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const eventsData = await fetchEventsFromDatoCMS();
+      const eventsData = await fetchEventsFromGuestManager();
+
+      console.log(eventsData);
+      
       
       setEvents(eventsData);
       setFilteredEvents(eventsData);
@@ -70,8 +73,8 @@ export default function DashboardPage() {
     const metrics = {
       totalEvents: eventsData.length,
       upcomingEvents: eventsData.filter(event => {
-        const eventDate = new Date(event.date);
-        return eventDate > now && event.status !== 'cancelled';
+        const eventDate = new Date(event.ends_at);
+        return eventDate > now;
       }).length,
       totalAttendees: eventsData.reduce((sum, event) => sum + (event.attendeeCount || 0), 0),
       activeEvents: eventsData.filter(event => event.status === 'active').length

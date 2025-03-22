@@ -152,3 +152,80 @@ export async function createEvent(eventData) {
     throw new Error(`Failed to create event: ${error.message}`);
   }
 }
+
+export async function fetchEventsFromGuestManager() {
+  const API_TOKEN = process.env.NEXT_PUBLIC_GUEST_MANAGER_AUTH_TOKEN;
+
+  if (!API_TOKEN) {
+    throw new Error("Missing API Token! Check .env.local");
+  }
+
+  try {
+    const response = await fetch(
+      "https://app.guestmanager.com/api/public/v2/events",
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${API_TOKEN}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Error fetching events: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const events = data.data || [];
+
+    // Fetch venue details for each event
+    const enrichedEvents = await Promise.all(
+      events.map(async (event) => {
+        let venueName = "N/A";
+        let venueCountry = "N/A";
+        if (event.venue_id) {
+          try {
+            const venueResponse = await fetch(
+              `https://app.guestmanager.com/api/public/v2/venues/${event.venue_id}`,
+              {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${API_TOKEN}`,
+                },
+              }
+            );
+            if (venueResponse.ok) {
+              const venueData = await venueResponse.json();
+              venueName = venueData.name || "Unknown Venue";
+              venueCountry = venueData.address.country_name || "Unknown Country";
+            }
+          } catch (venueError) {
+            console.error("Error fetching venue:", venueError);
+          }
+        }
+
+        // ✅ Compute event status based on the end date
+        const eventEndDate = new Date(event.end.local); // Convert end date to Date object
+        const status = eventEndDate >= new Date() ? "Upcoming" : "Completed"; // ✅ Logic applied
+
+        return {
+          id: event.id,
+          name: event.name,
+          starts_at: event.start.local,
+          ends_at: event.end.local,
+          guestManagerId: event.id,
+          venue: venueName,
+          status: status,
+          county: venueCountry,
+        };
+      })
+    );
+
+    return enrichedEvents;
+  } catch (error) {
+    console.error("Failed to fetch events from Guest Manager:", error);
+    return [];
+  }
+}
