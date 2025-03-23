@@ -153,6 +153,60 @@ export async function createEvent(eventData) {
   }
 }
 
+/**
+ * Fetches attendee counts for an event with proper pagination to handle more than 50 records
+ */
+async function fetchEventAttendeeCount(eventId, apiToken) {
+  try {
+    let allTickets = [];
+    let currentPage = 1;
+    let hasMorePages = true;
+    
+    // Continue fetching pages until we've got all tickets
+    while (hasMorePages) {
+      // Fetch current page of tickets for this event
+      const response = await fetch(
+        `https://app.guestmanager.com/api/public/v2/tickets?filter[event_ids]=${eventId}&page[size]=50&page[number]=${currentPage}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.warn(`Failed to fetch attendees for event ${eventId} (page ${currentPage})`);
+        break;
+      }
+
+      const data = await response.json();
+      const tickets = data.data || [];
+      
+      // Add this page's tickets to our collection
+      allTickets = [...allTickets, ...tickets];
+      
+      // Check if we need to fetch more pages
+      if (tickets.length < 50) {
+        hasMorePages = false; // No more pages if we got fewer than the max records
+      } else {
+        currentPage++; // Move to next page
+      }
+    }
+
+    // Count tickets by status
+    const registeredCount = allTickets.filter(ticket => ticket.status === "confirmed").length;
+    const attendedCount = allTickets.filter(ticket => ticket.status === "checked_in").length;
+
+    console.log(`Event ${eventId}: Found ${allTickets.length} total tickets (${registeredCount} registered, ${attendedCount} checked in)`);
+
+    return { registeredCount, attendedCount };
+  } catch (error) {
+    console.error(`Error fetching attendee count for event ${eventId}:`, error);
+    return { registeredCount: 0, attendedCount: 0 };
+  }
+}
+
 export async function fetchEventsFromGuestManager() {
   const API_TOKEN = process.env.NEXT_PUBLIC_GUEST_MANAGER_AUTH_TOKEN;
 
@@ -199,16 +253,20 @@ export async function fetchEventsFromGuestManager() {
             if (venueResponse.ok) {
               const venueData = await venueResponse.json();
               venueName = venueData.name || "Unknown Venue";
-              venueCountry = venueData.address.country_name || "Unknown Country";
+              venueCountry =
+                venueData.address.country_name || "Unknown Country";
             }
           } catch (venueError) {
             console.error("Error fetching venue:", venueError);
           }
         }
 
-        // ✅ Compute event status based on the end date
-        const eventEndDate = new Date(event.end.local); // Convert end date to Date object
-        const status = eventEndDate >= new Date() ? "Upcoming" : "Completed"; // ✅ Logic applied
+        const attendeeCount = await fetchEventAttendeeCount(
+          event.id,
+          API_TOKEN
+        );
+        const eventEndDate = new Date(event.end.local);
+        const status = eventEndDate >= new Date() ? "Upcoming" : "Completed";
 
         return {
           id: event.id,
@@ -219,6 +277,8 @@ export async function fetchEventsFromGuestManager() {
           venue: venueName,
           status: status,
           county: venueCountry,
+          registeredCount: attendeeCount.registeredCount,
+          attendeeCount: attendeeCount.attendedCount,
         };
       })
     );

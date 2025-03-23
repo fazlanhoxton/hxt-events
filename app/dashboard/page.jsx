@@ -43,8 +43,6 @@ export default function DashboardPage() {
       setLoading(true);
       const eventsData = await fetchEventsFromGuestManager();
 
-      console.log(eventsData);
-      
       
       setEvents(eventsData);
       setFilteredEvents(eventsData);

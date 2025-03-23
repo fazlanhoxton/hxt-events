@@ -59,6 +59,21 @@ const renderStatusBadge = (status) => {
 
 export const columns = [
   {
+    accessorKey: "guestManagerId",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Event ID
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => <div>{row.getValue("guestManagerId") || "-"}</div>,
+  },
+  {
     accessorKey: "name",
     header: ({ column }) => {
       return (
@@ -148,21 +163,6 @@ export const columns = [
     },
   },
   {
-    accessorKey: "guestManagerId",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Guest Manager ID
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => <div>{row.getValue("guestManagerId") || "-"}</div>,
-  },
-  {
     accessorKey: "status",
     header: ({ column }) => {
       return (
@@ -178,6 +178,28 @@ export const columns = [
     cell: ({ row }) => renderStatusBadge(row.getValue("status")),
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id));
+    },
+  },
+  {
+    accessorKey: "registeredCount",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Registered
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const count = row.getValue("registeredCount");
+      return (
+        <div className="text-center font-medium">
+          {count !== undefined ? count : "-"}
+        </div>
+      );
     },
   },
   {
