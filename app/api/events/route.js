@@ -67,7 +67,7 @@ export async function POST(req) {
         relationships: {
           item_type: {
             data: {
-              id: "egMSN5CuQquIDNV6P_lAKQ", // Your model ID
+              id: "egMSN5CuQquIDNV6P_lAKQ",
               type: "item_type",
             },
           },
@@ -99,6 +99,8 @@ export async function POST(req) {
     // 🔹 Fetch Venue Details for the Event
     const venueId = eventData.venue_id; // Ensure venue_id exists
     let countyName = "Unknown";
+
+    console.log("venueId:", venueId);
 
     if (venueId) {
       const venueResponse = await fetch(
