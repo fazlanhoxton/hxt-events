@@ -13,6 +13,15 @@ export async function POST(req) {
       throw new Error("Missing API Token! Check .env.local");
     }
 
+    // Prepare Guest Manager request data (only allowed fields)
+    const guestManagerData = {
+      name: body.name,
+      starts_at: body.starts_at,
+      ends_at: body.ends_at,
+      venue_id: body.venue_id,
+      sc_id: body.sc_id,
+    };
+
     // 🔹 Step 1: Create Event in Guest Manager
     const gmResponse = await fetch(
       "https://app.guestmanager.com/api/public/v2/events/",
@@ -22,7 +31,7 @@ export async function POST(req) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${API_TOKEN}`,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(guestManagerData),
       }
     );
 
@@ -42,6 +51,8 @@ export async function POST(req) {
       throw new Error("Missing DatoCMS API Token! Check .env.local");
     }
 
+    const slug = `${body.name.toLowerCase().replace(/\s+/g, "-")}`;
+
     // Prepare the JSON:API formatted request for DatoCMS
     const datoRequestBody = {
       data: {
@@ -50,8 +61,7 @@ export async function POST(req) {
           event_name: eventData.name,
           default_sc_id: body.sc_id,
           event_id_guest_manager: eventData.id.toString(),
-          start_date_and_time: body.starts_at,
-          end_date_and_time: body.ends_at,
+          slug: slug,
           created_at: eventData.created_at,
         },
         relationships: {
@@ -96,24 +106,32 @@ export async function POST(req) {
         {
           headers: {
             Authorization: `Bearer ${API_TOKEN}`,
-            "Content-Type": "application/json",
           },
         }
       );
 
       if (venueResponse.ok) {
         const venueData = await venueResponse.json();
-        countyName = venueData.address?.country_name || "Unknown"; // Fetch county from venue address
+        countyName = venueData.county?.name || "Unknown";
       }
     }
 
-    // 🔹 Return event with county information
+    // 🔹 Return event with county information and DatoCMS data
     return new Response(
       JSON.stringify({
         ...eventData,
         county: countyName,
+        datoCmsData: {
+          id: datoData?.data?.id,
+          slug: slug,
+        },
       }),
-      { status: 200 }
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
     );
   } catch (error) {
     console.error("API Request Failed:", error.message);

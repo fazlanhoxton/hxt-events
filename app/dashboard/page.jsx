@@ -5,13 +5,21 @@ import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { AddEventDialog } from "@/components/events/AddEventDialog";
 import { Toaster } from "sonner";
-import { fetchEventsFromDatoCMS } from "@/lib/api/events";
+import { fetchEventsFromGuestManager } from "@/lib/api/events";
 import { EventsDataTable } from "@/components/events/EventsDataTable";
 import { columns } from "@/components/events/Columns";
 import { CardSkeleton } from "@/components/ui/card-skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, TicketCheck, Users, Activity } from "lucide-react";
 
+/**
+ * DashboardPage component renders the main dashboard view.
+ * It fetches events from the GuestManager API and displays them
+ * along with various metrics such as total events, upcoming events, 
+ * and total attendees. Users can search events, and paginate through 
+ * the list. The component handles loading states, error handling, 
+ * and event creation updates.
+ */
 export default function DashboardPage() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +49,8 @@ export default function DashboardPage() {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const eventsData = await fetchEventsFromDatoCMS();
+      const eventsData = await fetchEventsFromGuestManager();
+
       
       setEvents(eventsData);
       setFilteredEvents(eventsData);
@@ -70,8 +79,8 @@ export default function DashboardPage() {
     const metrics = {
       totalEvents: eventsData.length,
       upcomingEvents: eventsData.filter(event => {
-        const eventDate = new Date(event.date);
-        return eventDate > now && event.status !== 'cancelled';
+        const eventDate = new Date(event.ends_at);
+        return eventDate > now;
       }).length,
       totalAttendees: eventsData.reduce((sum, event) => sum + (event.attendeeCount || 0), 0),
       activeEvents: eventsData.filter(event => event.status === 'active').length
@@ -141,7 +150,7 @@ export default function DashboardPage() {
           <CardSkeleton />
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Events</CardTitle>
@@ -177,19 +186,6 @@ export default function DashboardPage() {
               <div className="text-2xl font-bold">{metrics.totalAttendees}</div>
               <p className="text-xs text-muted-foreground">
                 Across all events
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Events</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics.activeEvents}</div>
-              <p className="text-xs text-muted-foreground">
-                Currently running events
               </p>
             </CardContent>
           </Card>

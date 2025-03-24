@@ -1,32 +1,34 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowUpDown, MoreHorizontal, Calendar, MapPin } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { ArrowUpDown, Copy, Calendar, MapPin, Check } from "lucide-react";
+import { toast } from "sonner";
+import { useState } from "react";
 
 // Format a date string to a readable format
 function formatColumnDate(dateString) {
   if (!dateString) return "-";
   const date = new Date(dateString);
-  return isNaN(date) ? "-" : date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  return isNaN(date)
+    ? "-"
+    : date.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
 }
 
 // Function to render status badge with appropriate color
 const renderStatusBadge = (status) => {
   if (!status) return <Badge variant="outline">Unknown</Badge>;
-  
+
   let variant = "outline";
   switch (status.toLowerCase()) {
     case "upcoming":
@@ -57,6 +59,21 @@ const renderStatusBadge = (status) => {
 
 export const columns = [
   {
+    accessorKey: "guestManagerId",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Event ID
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => <div>{row.getValue("guestManagerId") || "-"}</div>,
+  },
+  {
     accessorKey: "name",
     header: ({ column }) => {
       return (
@@ -69,32 +86,56 @@ export const columns = [
         </Button>
       );
     },
-    cell: ({ row }) => <div className="font-medium">{row.getValue("name") || "Unnamed Event"}</div>,
+    cell: ({ row }) => (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="font-medium w-60 overflow-hidden text-ellipsis">
+              {row.getValue("name") || "Unnamed Event"}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="text-sm font-medium">
+              {row.getValue("name") || "Unnamed Event"}
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    ),
   },
+
   {
-    accessorKey: "date",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Event Date
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    accessorKey: "starts_at",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Event Date
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => {
-      const date = row.getValue("date");
+      const date = row.getValue("starts_at");
       return (
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
-          {formatColumnDate(date)}
+          {date
+            ? new Date(date).toLocaleDateString("en-GB", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+              })
+            : "-"}
         </div>
       );
     },
     sortingFn: "datetime",
   },
+
   {
     accessorKey: "county",
     header: ({ column }) => (
@@ -108,7 +149,7 @@ export const columns = [
     ),
     cell: ({ row }) => <div>{row.getValue("county") || "-"}</div>,
   },
-  
+
   {
     accessorKey: "venue",
     header: ({ column }) => {
@@ -125,27 +166,23 @@ export const columns = [
     cell: ({ row }) => {
       const venue = row.getValue("venue");
       return (
-        <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-muted-foreground" />
-          {venue || "-"}
-        </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <span className="w-60 overflow-hidden text-ellipsis">
+                  {venue || "-"}
+                </span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="text-sm font-medium">{venue || "-"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       );
     },
-  },
-  {
-    accessorKey: "guestManagerId",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Guest Manager ID
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => <div>{row.getValue("guestManagerId") || "-"}</div>,
   },
   {
     accessorKey: "status",
@@ -166,6 +203,28 @@ export const columns = [
     },
   },
   {
+    accessorKey: "registeredCount",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Registered
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const count = row.getValue("registeredCount");
+      return (
+        <div className="text-center font-medium">
+          {count !== undefined ? count : "-"}
+        </div>
+      );
+    },
+  },
+  {
     accessorKey: "attendeeCount",
     header: ({ column }) => {
       return (
@@ -180,34 +239,59 @@ export const columns = [
     },
     cell: ({ row }) => {
       const count = row.getValue("attendeeCount");
-      return <div className="text-center font-medium">{count !== undefined ? count : "-"}</div>;
+      return (
+        <div className="text-center font-medium">
+          {count !== undefined ? count : "-"}
+        </div>
+      );
     },
   },
   {
     id: "actions",
-    cell: ({ row }) => {
-      const event = row.original;
-      
+    header: ({ column }) => {
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(event.id.toString())}>
-              Copy ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View details</DropdownMenuItem>
-            <DropdownMenuItem>Edit event</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">Delete event</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Copy Link
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const baseUrl = "https://hoxtonwealth.com/event/";
+      const eventName = row.getValue("name") || "Unnamed Event";
+      const slug = eventName.replace(/\s+/g, "-");
+      const referreal_name = "FazlanFaleel";
+      const county = row.getValue("county").replace(/\s+/g, "-");
+      const event_date = row.getValue("starts_at").split("T")[0];
+      const eventUrl = `${baseUrl}${slug}?utm_campaign=${county}_Seminar_${event_date}_Referral_${referreal_name}&utm_medium=${referreal_name}&utm_source=Referral`;
+      const [isCopied, setIsCopied] = useState(false);
+
+      const handleCopy = async () => {
+        await navigator.clipboard.writeText(eventUrl);
+        setIsCopied(true);
+        toast.success("Event URL copied to clipboard!");
+        // Reset the tooltip after 2 seconds
+        setTimeout(() => setIsCopied(false), 2000);
+      };
+      return (
+        <Button
+          variant="outline"
+          onClick={handleCopy}
+          className="flex gap-2 items-center"
+        >
+          {isCopied ? (
+            <>
+              <Check className="h-4 w-4 text-green-500" /> Copied!
+            </>
+          ) : (
+            <>
+              <Copy className="h-4 w-4" /> Copy
+            </>
+          )}
+        </Button>
       );
     },
   },

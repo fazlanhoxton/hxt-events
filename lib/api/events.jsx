@@ -152,3 +152,140 @@ export async function createEvent(eventData) {
     throw new Error(`Failed to create event: ${error.message}`);
   }
 }
+
+/**
+ * Fetches attendee counts for an event with proper pagination to handle more than 50 records
+ */
+async function fetchEventAttendeeCount(eventId, apiToken) {
+  try {
+    let allTickets = [];
+    let currentPage = 1;
+    let hasMorePages = true;
+    
+    // Continue fetching pages until we've got all tickets
+    while (hasMorePages) {
+      // Fetch current page of tickets for this event
+      const response = await fetch(
+        `https://app.guestmanager.com/api/public/v2/tickets?filter[event_ids]=${eventId}&page[size]=50&page[number]=${currentPage}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.warn(`Failed to fetch attendees for event ${eventId} (page ${currentPage})`);
+        break;
+      }
+
+      const data = await response.json();
+      const tickets = data.data || [];
+      
+      // Add this page's tickets to our collection
+      allTickets = [...allTickets, ...tickets];
+      
+      // Check if we need to fetch more pages
+      if (tickets.length < 50) {
+        hasMorePages = false; // No more pages if we got fewer than the max records
+      } else {
+        currentPage++; // Move to next page
+      }
+    }
+
+    // Count tickets by status
+    const registeredCount = allTickets.filter(ticket => ticket.status === "confirmed").length;
+    const attendedCount = allTickets.filter(ticket => ticket.status === "checked_in").length;
+
+    console.log(`Event ${eventId}: Found ${allTickets.length} total tickets (${registeredCount} registered, ${attendedCount} checked in)`);
+
+    return { registeredCount, attendedCount };
+  } catch (error) {
+    console.error(`Error fetching attendee count for event ${eventId}:`, error);
+    return { registeredCount: 0, attendedCount: 0 };
+  }
+}
+
+export async function fetchEventsFromGuestManager() {
+  const API_TOKEN = process.env.NEXT_PUBLIC_GUEST_MANAGER_AUTH_TOKEN;
+
+  if (!API_TOKEN) {
+    throw new Error("Missing API Token! Check .env.local");
+  }
+
+  try {
+    const response = await fetch(
+      "https://app.guestmanager.com/api/public/v2/events",
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${API_TOKEN}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Error fetching events: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const events = data.data || [];
+
+    // Fetch venue details for each event
+    const enrichedEvents = await Promise.all(
+      events.map(async (event) => {
+        let venueName = "N/A";
+        let venueCountry = "N/A";
+        if (event.venue_id) {
+          try {
+            const venueResponse = await fetch(
+              `https://app.guestmanager.com/api/public/v2/venues/${event.venue_id}`,
+              {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${API_TOKEN}`,
+                },
+              }
+            );
+            if (venueResponse.ok) {
+              const venueData = await venueResponse.json();
+              venueName = venueData.name || "Unknown Venue";
+              venueCountry =
+                venueData.address.country_name || "Unknown Country";
+            }
+          } catch (venueError) {
+            console.error("Error fetching venue:", venueError);
+          }
+        }
+
+        const attendeeCount = await fetchEventAttendeeCount(
+          event.id,
+          API_TOKEN
+        );
+        const eventEndDate = new Date(event.end.local);
+        const status = eventEndDate >= new Date() ? "Upcoming" : "Completed";
+
+        return {
+          id: event.id,
+          name: event.name,
+          starts_at: event.start.local,
+          ends_at: event.end.local,
+          guestManagerId: event.id,
+          venue: venueName,
+          status: status,
+          county: venueCountry,
+          registeredCount: attendeeCount.registeredCount,
+          attendeeCount: attendeeCount.attendedCount,
+        };
+      })
+    );
+
+    return enrichedEvents;
+  } catch (error) {
+    console.error("Failed to fetch events from Guest Manager:", error);
+    return [];
+  }
+}
