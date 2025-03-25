@@ -17,16 +17,16 @@ export function Sidebar({ className, isMobile }) {
       icon: MapPinHouse,
       href: '/dashboard/venues',
     },
-    {
-      label: 'Products',
-      icon: Package,
-      href: '/dashboard/products',
-    },
-    {
-      label: 'Customers',
-      icon: Users,
-      href: '/dashboard/customers',
-    },
+    // {
+    //   label: 'Products',
+    //   icon: Package,
+    //   href: '/dashboard/products',
+    // },
+    // {
+    //   label: 'Customers',
+    //   icon: Users,
+    //   href: '/dashboard/customers',
+    // },
     {
       label: 'Settings',
       icon: Settings,
