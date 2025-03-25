@@ -51,7 +51,8 @@ export async function POST(req) {
       throw new Error("Missing DatoCMS API Token! Check .env.local");
     }
 
-    const slug = `${body.name.toLowerCase().replace(/\s+/g, "-")}`;
+    // Generate slug from event name. remove special characters
+    const slug = `${body.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
     // Prepare the JSON:API formatted request for DatoCMS
     const datoRequestBody = {

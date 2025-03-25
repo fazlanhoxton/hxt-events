@@ -215,27 +215,46 @@ export async function fetchEventsFromGuestManager() {
   }
 
   try {
-    const response = await fetch(
-      "https://app.guestmanager.com/api/public/v2/events",
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${API_TOKEN}`,
-        },
-      }
-    );
+    // Get all events by making multiple API calls if needed
+    let allEvents = [];
+    let currentPage = 1;
+    let hasMorePages = true;
+    
+    while (hasMorePages) {
+      const response = await fetch(
+        `https://app.guestmanager.com/api/public/v2/events?page[number]=${currentPage}&page[size]=10`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${API_TOKEN}`,
+          },
+        }
+      );
 
-    if (!response.ok) {
-      throw new Error(`Error fetching events: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`Error fetching events: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const events = data.data || [];
+      
+      // Add this page's events to our collection
+      allEvents = [...allEvents, ...events];
+      
+      // Check if we need to fetch more pages
+      if (events.length < 10) {
+        hasMorePages = false; // No more pages if we got fewer than the max records
+      } else {
+        currentPage++; // Move to next page
+      }
     }
 
-    const data = await response.json();
-    const events = data.data || [];
-
-    // Fetch venue details for each event
+    // Continue with your existing code to enrich events with venue details
     const enrichedEvents = await Promise.all(
-      events.map(async (event) => {
+      allEvents.map(async (event) => {
+        // Your existing code for enriching events with venue details
+        // This code already fetches venue country correctly
         let venueName = "N/A";
         let venueCountry = "N/A";
         if (event.venue_id) {
@@ -253,18 +272,15 @@ export async function fetchEventsFromGuestManager() {
             if (venueResponse.ok) {
               const venueData = await venueResponse.json();
               venueName = venueData.name || "Unknown Venue";
-              venueCountry =
-                venueData.address.country_name || "Unknown Country";
+              venueCountry = venueData.address.country_name || "Unknown Country";
             }
           } catch (venueError) {
             console.error("Error fetching venue:", venueError);
           }
         }
-
-        const attendeeCount = await fetchEventAttendeeCount(
-          event.id,
-          API_TOKEN
-        );
+        
+        // Rest of your existing enrichment code...
+        const attendeeCount = await fetchEventAttendeeCount(event.id, API_TOKEN);
         const eventEndDate = new Date(event.end.local);
         const status = eventEndDate >= new Date() ? "Upcoming" : "Completed";
 
